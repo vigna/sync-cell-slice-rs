@@ -7,9 +7,9 @@
 [![Latest version](https://img.shields.io/crates/v/sync-cell-slice.svg)](https://crates.io/crates/sync-cell-slice)
 [![Documentation](https://docs.rs/sync-cell-slice/badge.svg)](https://docs.rs/sync-cell-slice)
 
-Sometimes, multiple threads needs to access a place or an element of a slice
+Sometimes, multiple threads need to access a place or an element of a slice
 without atomic operations because the absence of data races is guaranteed
-externally (e.g., each threads writes to a different element of the slice).
+externally (e.g., each thread writes to a different element of the slice).
 
 This small crate implements a solution based on a [`SyncCell<T>`] newtype with
 base type [`Cell<T>`]. Contrarily to [`Cell<T>`], [`SyncCell<T>`] can be shared
@@ -28,15 +28,15 @@ a `SyncCell<[T]>` a reference to a `[SyncCell<T>]`. Since [`SyncCell<T>`] is
 [`Sync`] if `T` is, `[SyncCell<T>]` is [`Sync`] if `T` is, too. Thus, if `T` is
  [`Sync`] sharing a slice of `T` among threads is just a matter of wrapping the
 slice in a `SyncCell` and calling [`SyncCell::as_slice_of_cells`]. This process
-is carried out by the extension trait [`SyncSlice`], which add to slices a
+is carried out by the extension trait [`SyncSlice`], which adds to slices a
 method [`as_sync_slice`].
 
-The design is based on suggestions contained in a [post by Alice
+The design is based on suggestions in a [post by Alice
 Ryhl](https://stackoverflow.com/questions/65178245/how-do-i-write-to-a-mutable-slice-from-multiple-threads-at-arbitrary-indexes-wit/65182786#65182786)
 and in this [thread on the Rust Language
-Forum](https://users.rust-lang.org/t/parallel-interior-mutability/121542/7).
+Forum](https://users.rust-lang.org/t/parallel-interior-mutability/121542).
 
-## Acknowledgements
+## Acknowledgments
 
 This software has been partially supported by project SERICS (PE00000014) under
 the NRRP MUR program funded by the EU - NGEU. Views and opinions expressed are

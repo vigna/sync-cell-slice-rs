@@ -23,13 +23,13 @@ use std::cell::Cell;
 /// cause data races. For example, the content will be written once and then
 /// read many times, in this order.
 ///
-/// The main usage of `SyncCell<T>` is to be to able to write to different
-/// locations of a slice in parallel, leaving the control of data races to the
-/// user, without the access cost of an atomic variable. For this purpose,
-/// `SyncCell` implements the [`as_slice_of_cells`](SyncCell::as_slice_of_cells)
-/// method, which turns a mutable reference to `SyncCell<[T]>` into a reference
-/// to `[SyncCell<T>]`, similarly to the [analogous method of
-/// `Cell`](Cell::as_slice_of_cells).
+/// The main goal of `SyncCell<T>` is that of make it possible to write to
+/// different locations of a slice in parallel, leaving the control of data
+/// races to the user, without the access cost of an atomic variable. For this
+/// purpose, `SyncCell` implements the
+/// [`as_slice_of_cells`](SyncCell::as_slice_of_cells) method, which turns a
+/// mutable reference to `SyncCell<[T]>` into a reference to `[SyncCell<T>]`,
+/// similar to the [analogous method of `Cell`](Cell::as_slice_of_cells).
 ///
 /// Since this is the most common usage, the extension trait [`SyncSlice`] adds
 /// to slices a method [`as_sync_slice`](SyncSlice::as_sync_slice) that turns a
@@ -43,13 +43,13 @@ use std::cell::Cell;
 /// behavior.
 ///
 /// `SyncCell` implements a few traits implemented by [`Cell`] by delegation for
-/// convenience, but some, as [`Clone`] or [`PartialOrd`], cannot be implemented
-/// because they would use unsafe methods.
+/// convenience, but some, such as [`Clone`] or [`PartialOrd`], cannot be
+/// implemented because they would use unsafe methods.
 ///
 /// # Safety
 ///
-/// Multiple thread can read from and write to the same `SyncCell` at the same
-/// time. It is responsibility of the user to ensure that there are no data
+/// Multiple threads can read from and write to the same `SyncCell` at the same
+/// time. It is the responsibility of the user to ensure that there are no data
 /// races, which would cause undefined behavior.
 ///
 /// # Examples
@@ -144,8 +144,8 @@ impl<T> SyncCell<T> {
     ///
     /// # Safety
     ///
-    /// Multiple thread can read from and write to the same `SyncCell` at the
-    /// same time. It is responsibility of the user to ensure that there are no
+    /// Multiple threads can read from and write to the same `SyncCell` at the
+    /// same time. It is the responsibility of the user to ensure that there are no
     /// data races, which would cause undefined behavior.
     #[inline]
     pub unsafe fn set(&self, val: T) {
@@ -156,8 +156,8 @@ impl<T> SyncCell<T> {
     ///
     /// # Safety
     ///
-    /// Multiple thread can read from and write to the same `SyncCell` at the
-    /// same time. It is responsibility of the user to ensure that there are no
+    /// Multiple threads can read from and write to the same `SyncCell` at the
+    /// same time. It is the responsibility of the user to ensure that there are no
     /// data races, which would cause undefined behavior.
     #[inline]
     pub unsafe fn swap(&self, other: &SyncCell<T>) {
@@ -169,8 +169,8 @@ impl<T> SyncCell<T> {
     ///
     /// # Safety
     ///
-    /// Multiple thread can read from and write to the same `SyncCell` at the
-    /// same time. It is responsibility of the user to ensure that there are no
+    /// Multiple threads can read from and write to the same `SyncCell` at the
+    /// same time. It is the responsibility of the user to ensure that there are no
     /// data races, which would cause undefined behavior.
     #[inline]
     pub unsafe fn replace(&self, val: T) -> T {
@@ -189,8 +189,8 @@ impl<T: Copy> SyncCell<T> {
     ///
     /// # Safety
     ///
-    /// Multiple thread can read from and write to the same `SyncCell` at the
-    /// same time. It is responsibility of the user to ensure that there are no
+    /// Multiple threads can read from and write to the same `SyncCell` at the
+    /// same time. It is the responsibility of the user to ensure that there are no
     /// data races, which would cause undefined behavior.
     #[inline]
     pub unsafe fn get(&self) -> T {
@@ -204,8 +204,8 @@ impl<T: ?Sized> SyncCell<T> {
     ///
     /// # Safety
     ///
-    /// Multiple thread can read from and write to the same `SyncCell` at the
-    /// same time. It is responsibility of the user to ensure that there are no
+    /// Multiple threads can read from and write to the same `SyncCell` at the
+    /// same time. It is the responsibility of the user to ensure that there are no
     /// data races, which would cause undefined behavior.
     #[inline]
     pub const unsafe fn as_ptr(&self) -> *mut T {
@@ -233,8 +233,8 @@ impl<T: Default> SyncCell<T> {
     ///
     /// # Safety
     ///
-    /// Multiple thread can read from and write to the same `SyncCell` at the
-    /// same time. It is responsibility of the user to ensure that there are no
+    /// Multiple threads can read from and write to the same `SyncCell` at the
+    /// same time. It is the responsibility of the user to ensure that there are no
     /// data races, which would cause undefined behavior.
     #[inline]
     pub unsafe fn take(&self) -> T {
