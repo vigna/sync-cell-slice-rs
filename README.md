@@ -1,4 +1,4 @@
-# dsi-bitstream
+# Sync cells and slices
 
 [![downloads](https://img.shields.io/crates/d/sync-cell-slice)](https://crates.io/crates/sync-cell-slice)
 [![dependents](https://img.shields.io/librariesio/dependents/cargo/sync-cell-slice)](https://crates.io/crates/sync-cell-slice/reverse_dependencies)
