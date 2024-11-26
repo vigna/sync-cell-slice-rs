@@ -11,10 +11,9 @@
 
 Cells and slices that are accessible from multiple threads.
 
-Sometimes, multiple threads needs to access a place, or an element of a slice,
-without the need of the guarantees of atomic operations, because the absence of
-data races is guaranteed externally (e.g., each threads writes to a different
-element of the slice).
+Sometimes, multiple threads needs to access a place or an element of a slice
+without atomic operations because the absence of data races is guaranteed
+externally (e.g., each threads writes to a different element of the slice).
 
 This small crate implements a solution based on a [`SyncCell<T>`] newtype with
 base type [`Cell<T>`]. Contrarily to [`Cell<T>`], [`SyncCell<T>`] can be shared
@@ -50,4 +49,4 @@ Forum](https://users.rust-lang.org/t/parallel-interior-mutability/121542/7).
 [`SyncCell::as_slice_of_cells`]: <https://docs.rs/sync-cell-slice/latest/sync_cell_slice/struct.SyncCell.html#method.as_slice_of_cells>
 [`SyncSlice`]: <https://docs.rs/sync-cell-slice/latest/sync_cell_slice/trait.SyncSlice.html>
 [`Sync`]: <https://doc.rust-lang.org/std/marker/trait.Sync.html>
-[`SyncUnsafeCell`]: <<https://doc.rust-lang.org/std/cell/struct.SyncUnsafeCell.html>
+[`SyncUnsafeCell`]: <https://doc.rust-lang.org/std/cell/struct.SyncUnsafeCell.html>
