@@ -89,7 +89,7 @@ use std::cell::Cell;
 ///
 /// ```
 /// use sync_cell_slice::SyncCell;
-/// use sync_cell_Slice::SyncSlice;
+/// use sync_cell_slice::SyncSlice;
 ///
 /// let mut perm = vec![0, 2, 3, 1];
 /// let mut inv = vec![0; perm.len()];
@@ -244,7 +244,7 @@ impl<T: Default> SyncCell<T> {
 
 #[allow(trivial_casts)]
 impl<T> SyncCell<[T]> {
-    /// Returns a `&[SyncCell<T>]` from a `&SyncCell<[T]>`
+    /// Returns a `&[SyncCell<T>]` from a `&SyncCell<[T]>`.
     #[inline]
     pub fn as_slice_of_cells(&self) -> &[SyncCell<T>] {
         let slice_of_cells = self.0.as_slice_of_cells();
