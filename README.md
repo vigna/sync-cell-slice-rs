@@ -27,7 +27,7 @@ and slices commute, that is, to obtain (safely) from a reference to
 a `SyncCell<[T]>` a reference to a `[SyncCell<T>]`. Since [`SyncCell<T>`] is
 [`Sync`] if `T` is, `[SyncCell<T>]` is [`Sync`] if `T` is, too. Thus, if `T` is
  [`Sync`] sharing a slice of `T` among threads is just a matter of wrapping the
-slice in a `SyncCell` and calling [`SyncCell::as_slice_of_cells`]. This process
+slice in a [`SyncCell`] and calling [`SyncCell::as_slice_of_cells`]. This process
 is carried out by the extension trait [`SyncSlice`], which adds to slices a
 method [`as_sync_slice`].
 

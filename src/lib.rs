@@ -140,7 +140,7 @@ impl<T> SyncCell<T> {
         Self(Cell::new(value))
     }
 
-    /// Sets the contained value by delegation to [`Cell::set`]
+    /// Sets the contained value by delegation to [`Cell::set`].
     ///
     /// # Safety
     ///
