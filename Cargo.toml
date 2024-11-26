@@ -1,0 +1,14 @@
+[package]
+name = "sync-cell-slice"
+version = "1.0.0"
+edition = "2021"
+description = "Cells and slices that are accessible from multiple threads"
+repository = "https://github.com/vigna/sync-cell-slice-rs/"
+license = "Apache-2.0 OR LGPL-2.1-or-later"
+keywords = ["log", "progress"]
+categories = ["development-tools::debugging"]
+authors = ["Sebastiano Vigna <sebastiano.vigna@unimi.it>"]
+
+[dependencies]
+
+[dev-dependencies]
