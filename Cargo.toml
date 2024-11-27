@@ -1,6 +1,6 @@
 [package]
 name = "sync-cell-slice"
-version = "0.9.10"
+version = "0.9.11"
 edition = "2021"
 description = "Cells and slices that are accessible from multiple threads"
 repository = "https://github.com/vigna/sync-cell-slice-rs/"
