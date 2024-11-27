@@ -35,6 +35,9 @@ The design is based on suggestions in a [post by Alice
 Ryhl](https://stackoverflow.com/questions/65178245/how-do-i-write-to-a-mutable-slice-from-multiple-threads-at-arbitrary-indexes-wit/65182786#65182786)
 and in this [thread on the Rust Language
 Forum](https://users.rust-lang.org/t/parallel-interior-mutability/121542).
+Tommaso Fontana, Valentin Lorentz, and Stefano Zacchiroli provided comments
+on the design.
+
 
 ## Acknowledgments
 
