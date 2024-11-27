@@ -22,14 +22,14 @@ radically different from that of [`SyncUnsafeCell`], all of which methods are
 safe.
 
 An important advantage of using [`Cell`] instead of [`UnsafeCell`] as base type
-is that we can use the [`Cell::as_slice_of_cells`] method to make [`SyncCell`]
-and slices commute, that is, to obtain (safely) from a reference to
-a `SyncCell<[T]>` a reference to a `[SyncCell<T>]`. Since [`SyncCell<T>`] is
-[`Sync`] if `T` is, `[SyncCell<T>]` is [`Sync`] if `T` is, too. Thus, if `T` is
- [`Sync`] sharing a slice of `T` among threads is just a matter of wrapping the
-slice in a [`SyncCell`] and calling [`SyncCell::as_slice_of_cells`]. This process
-is carried out by the extension trait [`SyncSlice`], which adds to slices a
-method [`as_sync_slice`].
+is that we can use the [`Cell::as_slice_of_cells`] method to implement an
+analogous method for [`SyncCell`] that makes it possible to make [`SyncCell`]
+ and slices commute, that is, to obtain (safely) from a `&SyncCell<[T]>` a
+`&[SyncCell<T>]`. Since [`SyncCell<T>`] is [`Sync`] if `T` is, `[SyncCell<T>]`
+is [`Sync`] if `T` is, too. Thus, if `T` is [`Sync`] sharing a slice of `T`
+among threads is just a matter of wrapping the slice in a [`SyncCell`] and
+ calling [`SyncCell::as_slice_of_cells`]. This process is carried out by the
+extension trait [`SyncSlice`], which adds to slices a method [`as_sync_slice`].
 
 The design is based on suggestions in a [post by Alice
 Ryhl](https://stackoverflow.com/questions/65178245/how-do-i-write-to-a-mutable-slice-from-multiple-threads-at-arbitrary-indexes-wit/65182786#65182786)

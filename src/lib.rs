@@ -28,23 +28,22 @@ use std::cell::Cell;
 /// races to the user, without the access cost of an atomic variable. For this
 /// purpose, `SyncCell` implements the
 /// [`as_slice_of_cells`](SyncCell::as_slice_of_cells) method, which turns a
-/// mutable reference to `SyncCell<[T]>` into a reference to `[SyncCell<T>]`,
-/// similar to the [analogous method of `Cell`](Cell::as_slice_of_cells).
+/// `&SyncCell<[T]>` into a `&[SyncCell<T>]`, similar to the [analogous method
+/// of `Cell`](Cell::as_slice_of_cells).
 ///
 /// Since this is the most common usage, the extension trait [`SyncSlice`] adds
 /// to slices a method [`as_sync_slice`](SyncSlice::as_sync_slice) that turns a
-/// mutable reference to a slice of `T` into a reference to a slice of
-/// `SyncCell<T>`.
+/// `&mut [T]` into a `&[SyncCell<T>]`.
 ///
 /// # Methods
 ///
-/// `SyncCell<T>` painstakingly reimplements the methods of `Cell<T>` as unsafe,
+/// `SyncCell` painstakingly reimplements the methods of [`Cell`] as unsafe,
 /// since they rely on external synchronization mechanisms to avoid undefined
 /// behavior.
 ///
-/// `SyncCell` implements a few traits implemented by [`Cell`] by delegation for
-/// convenience, but some, such as [`Clone`] or [`PartialOrd`], cannot be
-/// implemented because they would use unsafe methods.
+/// `SyncCell` implements also a few traits implemented by [`Cell`] by
+/// delegation for convenience, but some, such as [`Clone`] or [`PartialOrd`],
+/// cannot be implemented because they would use unsafe methods.
 ///
 /// # Safety
 ///
@@ -59,7 +58,7 @@ use std::cell::Cell;
 ///
 /// ```
 /// use sync_cell_slice::SyncCell;
-/// use sync_cell_Slice::SyncSlice;
+/// use sync_cell_slice::SyncSlice;
 ///
 /// let mut x = 0;
 /// let c = SyncCell::new(x);
@@ -253,12 +252,30 @@ impl<T> SyncCell<[T]> {
     }
 }
 
-/// Extension trait turning a mutable reference to a slice of `T` into a
-/// reference to a slice of `SyncCell<T>`.
+/// Extension trait turning a `&mut [T]` into a `&[SyncCell<T>]`.
 ///
-/// The resulting slice is `Sync` if `T` is `Sync`.
+/// The result [`Sync`] if `T` is [`Sync`].
 pub trait SyncSlice<T> {
     /// Returns a `&[SyncCell<T>]` from a `&mut [T]`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use sync_cell_slice::SyncSlice;
+    ///
+    /// let mut v = vec![1, 2, 3, 4];
+    /// // s can be used to write to v from multiple threads
+    /// let s = v.as_sync_slice();
+    ///
+    /// std::thread::scope(|scope| {
+    ///     scope.spawn(|| {
+    ///         unsafe { s[0].set(5) };
+    ///     });
+    ///     scope.spawn(|| {
+    ///         unsafe { s[1].set(10) };
+    ///     });
+    /// });
+    /// ```
     fn as_sync_slice(&mut self) -> &[SyncCell<T>];
 }
 
