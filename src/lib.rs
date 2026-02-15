@@ -13,17 +13,17 @@ use std::cell::Cell;
 /// # Memory layout
 ///
 /// `SyncCell<T>` has the same memory layout and caveats as [`Cell<T>`], but it
-/// is [`Sync`] if `T` is. In particular, if [`Cell<T>`] has the same in-memory
-/// representation as its inner type `T`, then `SyncCell<T>` has the same
-///  in-memory representation as its inner type `T` (but the code does not rely
-/// on this). `SyncCell<T>` is also [`Send`] if [`Cell<T>`] is [`Send`].
+/// is [`Sync`] if `T` is. In particular, since [`Cell<T>`] has the same
+/// in-memory representation as its inner type `T`, `SyncCell<T>`, too, has the
+/// same in-memory representation as its inner type `T`. `SyncCell<T>` is also
+/// [`Send`] if [`Cell<T>`] is [`Send`].
 ///
 /// `SyncCell<T>` is useful when you need to share a mutable memory location
 /// across threads, and you rely on the fact that the intended behavior will not
 /// cause data races. For example, the content will be written once and then
 /// read many times, in this order.
 ///
-/// The main goal of `SyncCell<T>` is that of make it possible to write to
+/// The main goal of `SyncCell<T>` is to make it possible to write to
 /// different locations of a slice in parallel, leaving the control of data
 /// races to the user, without the access cost of an atomic variable. For this
 /// purpose, `SyncCell` implements the
@@ -60,7 +60,7 @@ use std::cell::Cell;
 /// use sync_cell_slice::SyncCell;
 /// use sync_cell_slice::SyncSlice;
 ///
-/// let mut x = 0;
+/// let x = 0;
 /// let c = SyncCell::new(x);
 ///
 /// let mut v = vec![1, 2, 3, 4];
@@ -104,12 +104,12 @@ use std::cell::Cell;
 ///     scope.spawn(|| { // Invert second half
 ///         for i in 2..perm.len() {
 ///             unsafe { inv_sync[perm[i]].set(i) };
-///        }
+///         }
 ///     });
 /// });
 ///
 /// assert_eq!(inv, vec![0, 3, 1, 2]);
-
+/// ```
 #[repr(transparent)]
 pub struct SyncCell<T: ?Sized>(Cell<T>);
 
@@ -117,25 +117,10 @@ pub struct SyncCell<T: ?Sized>(Cell<T>);
 unsafe impl<T: ?Sized> Send for SyncCell<T> where Cell<T>: Send {}
 unsafe impl<T: ?Sized + Sync> Sync for SyncCell<T> {}
 
-impl<T: Default> Default for SyncCell<T> {
-    /// Creates a `SyncCell<T>`, with the `Default` value for `T`.
-    #[inline]
-    fn default() -> SyncCell<T> {
-        SyncCell::new(Default::default())
-    }
-}
-
-impl<T> From<T> for SyncCell<T> {
-    /// Creates a new `SyncCell` containing the given value.
-    fn from(value: T) -> SyncCell<T> {
-        SyncCell::new(value)
-    }
-}
-
 impl<T> SyncCell<T> {
     /// Creates a new `SyncCell` containing the given value.
     #[inline]
-    pub fn new(value: T) -> Self {
+    pub const fn new(value: T) -> Self {
         Self(Cell::new(value))
     }
 
@@ -201,13 +186,11 @@ impl<T: ?Sized> SyncCell<T> {
     /// Returns a raw pointer to the underlying data in this cell
     /// by delegation to [`Cell::as_ptr`].
     ///
-    /// # Safety
-    ///
-    /// Multiple threads can read from and write to the same `SyncCell` at the
+    /// Multiple threads can read from and write to the same [`SyncCell`] at the
     /// same time. It is the responsibility of the user to ensure that there are no
-    /// data races, which would cause undefined behavior.
-    #[inline]
-    pub const unsafe fn as_ptr(&self) -> *mut T {
+    /// data races, which might lead to undefined behavior.
+    #[inline(always)]
+    pub const fn as_ptr(&self) -> *mut T {
         self.0.as_ptr()
     }
 
@@ -222,7 +205,9 @@ impl<T: ?Sized> SyncCell<T> {
     #[allow(trivial_casts)]
     #[inline]
     pub fn from_mut(value: &mut T) -> &Self {
-        // SAFETY: `SyncCell<T>` has the same memory layout as `Cell<T>`.
+        // SAFETY: `Cell::from_mut` converts `&mut T` to `&Cell<T>`, and
+        // `SyncCell<T>` has the same memory layout as `Cell<T>` due to
+        // `#[repr(transparent)]`.
         unsafe { &*(Cell::from_mut(value) as *const Cell<T> as *const Self) }
     }
 }
@@ -237,7 +222,7 @@ impl<T: Default> SyncCell<T> {
     /// data races, which would cause undefined behavior.
     #[inline]
     pub unsafe fn take(&self) -> T {
-        self.0.replace(Default::default())
+        self.0.take()
     }
 }
 
@@ -248,13 +233,29 @@ impl<T> SyncCell<[T]> {
     pub fn as_slice_of_cells(&self) -> &[SyncCell<T>] {
         let slice_of_cells = self.0.as_slice_of_cells();
         // SAFETY: `SyncCell<T>` has the same memory layout as `Cell<T>`
+        // due to `#[repr(transparent)]`.
         unsafe { &*(slice_of_cells as *const [Cell<T>] as *const [SyncCell<T>]) }
+    }
+}
+
+impl<T: Default> Default for SyncCell<T> {
+    /// Creates a `SyncCell<T>`, with the `Default` value for `T`.
+    #[inline]
+    fn default() -> SyncCell<T> {
+        SyncCell::new(Default::default())
+    }
+}
+
+impl<T> From<T> for SyncCell<T> {
+    /// Creates a new `SyncCell` containing the given value.
+    fn from(value: T) -> SyncCell<T> {
+        SyncCell::new(value)
     }
 }
 
 /// Extension trait turning a `&mut [T]` into a `&[SyncCell<T>]`.
 ///
-/// The result [`Sync`] if `T` is [`Sync`].
+/// The result is [`Sync`] if `T` is [`Sync`].
 pub trait SyncSlice<T> {
     /// Returns a `&[SyncCell<T>]` from a `&mut [T]`.
     ///
@@ -282,5 +283,108 @@ pub trait SyncSlice<T> {
 impl<T> SyncSlice<T> for [T] {
     fn as_sync_slice(&mut self) -> &[SyncCell<T>] {
         SyncCell::from_mut(self).as_slice_of_cells()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_and_into_inner() {
+        let c = SyncCell::new(42);
+        assert_eq!(c.into_inner(), 42);
+    }
+
+    #[test]
+    fn test_set_and_get() {
+        let c = SyncCell::new(0);
+        unsafe { c.set(10) };
+        assert_eq!(unsafe { c.get() }, 10);
+    }
+
+    #[test]
+    fn test_swap() {
+        let a = SyncCell::new(1);
+        let b = SyncCell::new(2);
+        unsafe { a.swap(&b) };
+        assert_eq!(unsafe { a.get() }, 2);
+        assert_eq!(unsafe { b.get() }, 1);
+    }
+
+    #[test]
+    fn test_replace() {
+        let c = SyncCell::new(5);
+        let old = unsafe { c.replace(10) };
+        assert_eq!(old, 5);
+        assert_eq!(unsafe { c.get() }, 10);
+    }
+
+    #[test]
+    fn test_take() {
+        let c = SyncCell::new(42);
+        let val = unsafe { c.take() };
+        assert_eq!(val, 42);
+        assert_eq!(unsafe { c.get() }, 0);
+    }
+
+    #[test]
+    fn test_get_mut() {
+        let mut c = SyncCell::new(3);
+        *c.get_mut() = 7;
+        assert_eq!(unsafe { c.get() }, 7);
+    }
+
+    #[test]
+    fn test_as_ptr() {
+        let c = SyncCell::new(99);
+        let ptr = c.as_ptr();
+        assert_eq!(unsafe { *ptr }, 99);
+    }
+
+    #[test]
+    fn test_from_mut() {
+        let mut val = 10;
+        let c = SyncCell::from_mut(&mut val);
+        unsafe { c.set(20) };
+        assert_eq!(val, 20);
+    }
+
+    #[test]
+    fn test_default() {
+        let c: SyncCell<i32> = SyncCell::default();
+        assert_eq!(unsafe { c.get() }, 0);
+    }
+
+    #[test]
+    fn test_from() {
+        let c: SyncCell<i32> = SyncCell::from(42);
+        assert_eq!(unsafe { c.get() }, 42);
+    }
+
+    #[test]
+    fn test_as_slice_of_cells() {
+        let mut v = [1, 2, 3];
+        let sync_slice = v.as_sync_slice();
+        assert_eq!(sync_slice.len(), 3);
+        assert_eq!(unsafe { sync_slice[0].get() }, 1);
+        assert_eq!(unsafe { sync_slice[1].get() }, 2);
+        assert_eq!(unsafe { sync_slice[2].get() }, 3);
+    }
+
+    #[test]
+    fn test_sync_slice_mutation() {
+        let mut v = vec![0; 4];
+        let sync_slice = v.as_sync_slice();
+
+        std::thread::scope(|scope| {
+            for (i, cell) in sync_slice.iter().enumerate() {
+                scope.spawn(move || {
+                    unsafe { cell.set(i * 10) };
+                });
+            }
+        });
+
+        assert_eq!(v, vec![0, 10, 20, 30]);
     }
 }

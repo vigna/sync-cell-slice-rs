@@ -18,17 +18,17 @@ obtained by forcing [`Sync`] on [`SyncCell<T>`] if `T` is [`Sync`].
 
 All access methods are unsafe, because lack of external synchronization might
 lead to data races, and thus to undefined behavior. Note that this approach is
-radically different from that of [`SyncUnsafeCell`], all of which methods are
+radically different from that of [`SyncUnsafeCell`], all of whose methods are
 safe.
 
 An important advantage of using [`Cell`] instead of [`UnsafeCell`] as base type
 is that we can use the [`Cell::as_slice_of_cells`] method to implement an
 analogous method for [`SyncCell`] that makes it possible to make [`SyncCell`]
- and slices commute, that is, to obtain (safely) from a `&SyncCell<[T]>` a
+and slices commute, that is, to obtain (safely) from a `&SyncCell<[T]>` a
 `&[SyncCell<T>]`. Since [`SyncCell<T>`] is [`Sync`] if `T` is, `[SyncCell<T>]`
 is [`Sync`] if `T` is, too. Thus, if `T` is [`Sync`] sharing a slice of `T`
 among threads is just a matter of wrapping the slice in a [`SyncCell`] and
- calling [`SyncCell::as_slice_of_cells`]. This process is carried out by the
+calling [`SyncCell::as_slice_of_cells`]. This process is carried out by the
 extension trait [`SyncSlice`], which adds to slices a method [`as_sync_slice`].
 
 The design is based on suggestions in a [post by Alice
