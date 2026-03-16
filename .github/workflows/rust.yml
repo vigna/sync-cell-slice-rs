@@ -1,0 +1,35 @@
+name: Rust
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check formatting
+        run: cargo fmt -- --check
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+      - name: Run tests
+        run: cargo test --verbose
+
+  build-i686:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install 32-bit support
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib
+      - name: Add i686 target
+        run: rustup target add i686-unknown-linux-gnu
+      - name: Build (32-bit)
+        run: cargo build --target i686-unknown-linux-gnu
+      - name: Test (32-bit)
+        run: cargo test --target i686-unknown-linux-gnu

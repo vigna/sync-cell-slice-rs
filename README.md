@@ -1,11 +1,11 @@
 # Sync cells and slices
 
-[![downloads](https://img.shields.io/crates/d/sync-cell-slice)](https://crates.io/crates/sync-cell-slice)
-[![dependents](https://img.shields.io/librariesio/dependents/cargo/sync-cell-slice)](https://crates.io/crates/sync-cell-slice/reverse_dependencies)
+[![crates.io](https://img.shields.io/crates/v/sync-cell-slice.svg)](https://crates.io/crates/sync-cell-slice)
+[![docs.rs](https://docs.rs/sync-cell-slice/badge.svg)](https://docs.rs/sync-cell-slice)
+[![rustc](https://img.shields.io/badge/rustc-1.85+-red.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
+[![CI](https://github.com/vigna/sync-cell-slice-rs/actions/workflows/rust.yml/badge.svg)](https://github.com/vigna/sync-cell-slice-rs/actions)
 ![license](https://img.shields.io/crates/l/sync-cell-slice)
-[![](https://tokei.rs/b1/github/vigna/sync-cell-slice-rs?type=Rust)](https://github.com/vigna/sync-cell-slice-rs)
-[![Latest version](https://img.shields.io/crates/v/sync-cell-slice.svg)](https://crates.io/crates/sync-cell-slice)
-[![Documentation](https://docs.rs/sync-cell-slice/badge.svg)](https://docs.rs/sync-cell-slice)
+[![downloads](https://img.shields.io/crates/d/sync-cell-slice)](https://crates.io/crates/sync-cell-slice)
 
 Sometimes, multiple threads need to access a place or an element of a slice
 without atomic operations because the absence of data races is guaranteed
