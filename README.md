@@ -19,7 +19,7 @@ obtained by forcing [`Sync`] on [`SyncCell<T>`] if `T` is [`Sync`].
 All access methods are unsafe, because lack of external synchronization might
 lead to data races, and thus to undefined behavior. Note that this approach is
 radically different from that of [`SyncUnsafeCell`], all of whose methods are
-safe.
+safe. The crate is `no_std`.
 
 An important advantage of using [`Cell`] instead of [`UnsafeCell`] as base type
 is that we can use the [`Cell::as_slice_of_cells`] method to implement an

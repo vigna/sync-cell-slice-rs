@@ -5,8 +5,15 @@
  */
 
 #![doc = include_str!("../README.md")]
+#![no_std]
 
-use std::cell::Cell;
+#[cfg(test)]
+#[macro_use]
+extern crate std;
+
+use core::cell::Cell;
+use core::fmt;
+use core::ptr;
 
 /// A mutable memory location that is [`Sync`].
 ///
@@ -26,14 +33,13 @@ use std::cell::Cell;
 /// The main goal of `SyncCell<T>` is to make it possible to write to
 /// different locations of a slice in parallel, leaving the control of data
 /// races to the user, without the access cost of an atomic variable. For this
-/// purpose, `SyncCell` implements the
-/// [`as_slice_of_cells`](SyncCell::as_slice_of_cells) method, which turns a
-/// `&SyncCell<[T]>` into a `&[SyncCell<T>]`, similar to the [analogous method
-/// of `Cell`](Cell::as_slice_of_cells).
+/// purpose, `SyncCell` implements the [`as_slice_of_cells`] method, which
+/// turns a `&SyncCell<[T]>` into a `&[SyncCell<T>]`, similar to the [analogous
+/// method of `Cell`].
 ///
 /// Since this is the most common usage, the extension trait [`SyncSlice`] adds
-/// to slices a method [`as_sync_slice`](SyncSlice::as_sync_slice) that turns a
-/// `&mut [T]` into a `&[SyncCell<T>]`.
+/// to slices a method [`as_sync_slice`] that turns a `&mut [T]` into a
+/// `&[SyncCell<T>]`.
 ///
 /// # Methods
 ///
@@ -43,13 +49,21 @@ use std::cell::Cell;
 ///
 /// `SyncCell` implements also a few traits implemented by [`Cell`] by
 /// delegation for convenience, but some, such as [`Clone`] or [`PartialOrd`],
-/// cannot be implemented because they would use unsafe methods.
+/// cannot be implemented because they would use unsafe methods. The [`Debug`]
+/// implementation is opaque, as reading the contained value would require
+/// external synchronization.
 ///
 /// # Safety
 ///
 /// Multiple threads can read from and write to the same `SyncCell` at the same
 /// time. It is the responsibility of the user to ensure that there are no data
 /// races, which would cause undefined behavior.
+///
+/// Moreover, the methods that move or copy values in or out of a cell
+/// ([`get`], [`set`], [`swap`], [`replace`], and [`take`]) can transfer a
+/// value of type `T` to a different thread: if `T` is not [`Send`], the
+/// caller must ensure that such values are not moved to, copied to, or
+/// dropped by, a thread different from the thread owning them.
 ///
 /// # Examples
 ///
@@ -110,11 +124,23 @@ use std::cell::Cell;
 ///
 /// assert_eq!(inv, vec![0, 3, 1, 2]);
 /// ```
+///
+/// [`as_slice_of_cells`]: SyncCell::as_slice_of_cells
+/// [analogous method of `Cell`]: Cell::as_slice_of_cells
+/// [`as_sync_slice`]: SyncSlice::as_sync_slice
+/// [`get`]: SyncCell::get
+/// [`set`]: SyncCell::set
+/// [`swap`]: SyncCell::swap
+/// [`replace`]: SyncCell::replace
+/// [`take`]: SyncCell::take
+/// [`Debug`]: core::fmt::Debug
 #[repr(transparent)]
 pub struct SyncCell<T: ?Sized>(Cell<T>);
 
-// This is where we depart from Cell.
+// This impl is equivalent to the automatically derived one, but we make it
+// explicit for clarity: like Cell<T>, SyncCell<T> is Send iff T is Send.
 unsafe impl<T: ?Sized> Send for SyncCell<T> where Cell<T>: Send {}
+// This is where we depart from Cell: SyncCell<T> is Sync if T is Sync.
 unsafe impl<T: ?Sized + Sync> Sync for SyncCell<T> {}
 
 impl<T> SyncCell<T> {
@@ -131,6 +157,10 @@ impl<T> SyncCell<T> {
     /// Multiple threads can read from and write to the same `SyncCell` at the
     /// same time. It is the responsibility of the user to ensure that there are no
     /// data races, which would cause undefined behavior.
+    ///
+    /// Moreover, this method drops the previously contained value: if `T` is
+    /// not [`Send`], the caller must ensure that the calling thread owns that
+    /// value.
     #[inline]
     pub unsafe fn set(&self, val: T) {
         self.0.set(val);
@@ -138,11 +168,20 @@ impl<T> SyncCell<T> {
 
     /// Swaps the values of two `SyncCell`s by delegation to [`Cell::swap`].
     ///
+    /// # Panics
+    ///
+    /// This method panics if `self` and `other` are different cells that
+    /// partially overlap (see [`Cell::swap`]).
+    ///
     /// # Safety
     ///
     /// Multiple threads can read from and write to the same `SyncCell` at the
     /// same time. It is the responsibility of the user to ensure that there are no
     /// data races, which would cause undefined behavior.
+    ///
+    /// Moreover, this method moves the contained values between cells: if `T`
+    /// is not [`Send`], the caller must ensure that the calling thread owns
+    /// both values.
     #[inline]
     pub unsafe fn swap(&self, other: &SyncCell<T>) {
         self.0.swap(&other.0);
@@ -156,6 +195,10 @@ impl<T> SyncCell<T> {
     /// Multiple threads can read from and write to the same `SyncCell` at the
     /// same time. It is the responsibility of the user to ensure that there are no
     /// data races, which would cause undefined behavior.
+    ///
+    /// Moreover, this method returns the previously contained value: if `T` is
+    /// not [`Send`], the caller must ensure that the calling thread owns that
+    /// value.
     #[inline]
     pub unsafe fn replace(&self, val: T) -> T {
         self.0.replace(val)
@@ -176,6 +219,10 @@ impl<T: Copy> SyncCell<T> {
     /// Multiple threads can read from and write to the same `SyncCell` at the
     /// same time. It is the responsibility of the user to ensure that there are no
     /// data races, which would cause undefined behavior.
+    ///
+    /// Moreover, this method returns a copy of the contained value: if `T` is
+    /// not [`Send`], the caller must ensure that the copy is not used by a
+    /// thread different from the thread owning the original value.
     #[inline]
     pub unsafe fn get(&self) -> T {
         self.0.get()
@@ -186,10 +233,11 @@ impl<T: ?Sized> SyncCell<T> {
     /// Returns a raw pointer to the underlying data in this cell
     /// by delegation to [`Cell::as_ptr`].
     ///
-    /// Multiple threads can read from and write to the same [`SyncCell`] at the
-    /// same time. It is the responsibility of the user to ensure that there are no
-    /// data races, which might lead to undefined behavior.
-    #[inline(always)]
+    /// Dereferencing the returned pointer requires unsafe code: multiple
+    /// threads can read from and write to the same `SyncCell` at the same
+    /// time, and it is the responsibility of the user to ensure that there
+    /// are no data races, which would cause undefined behavior.
+    #[inline]
     pub const fn as_ptr(&self) -> *mut T {
         self.0.as_ptr()
     }
@@ -202,13 +250,12 @@ impl<T: ?Sized> SyncCell<T> {
     }
 
     /// Returns a `&SyncCell<T>` from a `&mut T`.
-    #[allow(trivial_casts)]
     #[inline]
     pub fn from_mut(value: &mut T) -> &Self {
         // SAFETY: `Cell::from_mut` converts `&mut T` to `&Cell<T>`, and
         // `SyncCell<T>` has the same memory layout as `Cell<T>` due to
         // `#[repr(transparent)]`.
-        unsafe { &*(Cell::from_mut(value) as *const Cell<T> as *const Self) }
+        unsafe { &*(ptr::from_ref(Cell::from_mut(value)) as *const Self) }
     }
 }
 
@@ -220,13 +267,16 @@ impl<T: Default> SyncCell<T> {
     /// Multiple threads can read from and write to the same `SyncCell` at the
     /// same time. It is the responsibility of the user to ensure that there are no
     /// data races, which would cause undefined behavior.
+    ///
+    /// Moreover, this method returns the previously contained value: if `T` is
+    /// not [`Send`], the caller must ensure that the calling thread owns that
+    /// value.
     #[inline]
     pub unsafe fn take(&self) -> T {
         self.0.take()
     }
 }
 
-#[allow(trivial_casts)]
 impl<T> SyncCell<[T]> {
     /// Returns a `&[SyncCell<T>]` from a `&SyncCell<[T]>`.
     #[inline]
@@ -234,7 +284,7 @@ impl<T> SyncCell<[T]> {
         let slice_of_cells = self.0.as_slice_of_cells();
         // SAFETY: `SyncCell<T>` has the same memory layout as `Cell<T>`
         // due to `#[repr(transparent)]`.
-        unsafe { &*(slice_of_cells as *const [Cell<T>] as *const [SyncCell<T>]) }
+        unsafe { &*(ptr::from_ref(slice_of_cells) as *const [SyncCell<T>]) }
     }
 }
 
@@ -248,8 +298,17 @@ impl<T: Default> Default for SyncCell<T> {
 
 impl<T> From<T> for SyncCell<T> {
     /// Creates a new `SyncCell` containing the given value.
+    #[inline]
     fn from(value: T) -> SyncCell<T> {
         SyncCell::new(value)
+    }
+}
+
+impl<T: ?Sized> fmt::Debug for SyncCell<T> {
+    /// Formats opaquely, as reading the contained value would require
+    /// external synchronization.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SyncCell").finish_non_exhaustive()
     }
 }
 
@@ -289,6 +348,16 @@ impl<T> SyncSlice<T> for [T] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use static_assertions::{assert_impl_all, assert_not_impl_any};
+    use std::rc::Rc;
+
+    // The whole point of this crate is the auto-trait surface: pin it down
+    // at compile time so that changes to the unsafe impls cannot slip by.
+    assert_impl_all!(SyncCell<i32>: Send, Sync);
+    assert_impl_all!(SyncCell<[i32]>: Send, Sync);
+    assert_impl_all!(SyncCell<Cell<u8>>: Send);
+    assert_not_impl_any!(SyncCell<Cell<u8>>: Sync);
+    assert_not_impl_any!(SyncCell<Rc<u8>>: Send, Sync);
 
     #[test]
     fn test_new_and_into_inner() {
@@ -360,6 +429,12 @@ mod tests {
     fn test_from() {
         let c: SyncCell<i32> = SyncCell::from(42);
         assert_eq!(unsafe { c.get() }, 42);
+    }
+
+    #[test]
+    fn test_debug() {
+        let c = SyncCell::new(42);
+        assert_eq!(format!("{:?}", c), "SyncCell { .. }");
     }
 
     #[test]

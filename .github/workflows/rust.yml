@@ -17,9 +17,27 @@ jobs:
       - name: Check formatting
         run: cargo fmt -- --check
       - name: Run clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-features --all-targets -- -D warnings
       - name: Run tests
         run: cargo test --verbose
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install MSRV toolchain
+        run: rustup toolchain install 1.85 --profile minimal
+      - name: Build with MSRV
+        run: cargo +1.85 build
+
+  miri:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Miri
+        run: rustup toolchain install nightly --profile minimal --component miri
+      - name: Run tests under Miri
+        run: cargo +nightly miri test
 
   build-i686:
     runs-on: ubuntu-latest
